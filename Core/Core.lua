@@ -20,6 +20,15 @@ function UnhaltedUnitFrames:OnInitialize()
     local playerSpecalizationChangedEventFrame = CreateFrame("Frame")
     playerSpecalizationChangedEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     playerSpecalizationChangedEventFrame:SetScript("OnEvent", function(_, event, ...) if event == "PLAYER_SPECIALIZATION_CHANGED" then local unit = ... if unit == "player" then UUF:UpdateAllUnitFrames() end end end)
+
+    local groupUpdateEventFrame = CreateFrame("Frame")
+    groupUpdateEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+    groupUpdateEventFrame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
+    groupUpdateEventFrame:SetScript("OnEvent", function(_, event)
+        if UUF.db.profile.Units.party.SortOrder == "ROLE" then
+            UUF:CreateTestPartyFrames()
+        end
+    end)
 end
 
 function UnhaltedUnitFrames:OnEnable()
@@ -31,5 +40,6 @@ function UnhaltedUnitFrames:OnEnable()
     UUF:SpawnUnitFrame("focus")
     UUF:SpawnUnitFrame("focustarget")
     UUF:SpawnUnitFrame("pet")
+    UUF:SpawnUnitFrame("party")
     UUF:SpawnUnitFrame("boss")
 end
