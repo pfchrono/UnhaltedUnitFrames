@@ -214,6 +214,11 @@ local Defaults = {
                         Layout = {"CENTER", "TOP", 0, 0},
                         Texture = "COMBAT0"
                     },
+                    PvPIndicator = {
+                        Enabled = true,
+                        Size = 24,
+                        Layout = {"TOPRIGHT", "TOPRIGHT", -3, -3},
+                    },
                     Mouseover = {
                         Enabled = true,
                         Colour = {1, 1, 1},
@@ -419,6 +424,11 @@ local Defaults = {
                         Size = 16,
                         Layout = {"CENTER", "TOP", 0, 0},
                         Texture = "COMBAT0"
+                    },
+                    PvPIndicator = {
+                        Enabled = true,
+                        Size = 24,
+                        Layout = {"TOPRIGHT", "TOPRIGHT", -3, -3},
                     },
                     Mouseover = {
                         Enabled = true,

@@ -133,3 +133,9 @@ guardianEventFrame:SetScript("OnEvent", function(_, event)
     UUF:UpdateUnitFrame(UUF.PLAYER, "player")
     if UUF.PET then UUF:UpdateUnitFrame(UUF.PET, "pet") end
 end)
+
+local minimapPingFrame = CreateFrame("Frame")
+minimapPingFrame:RegisterEvent("MINIMAP_PING")
+minimapPingFrame:SetScript("OnEvent", function(_, _, unit)
+    UUF:ShowPingOnUnit(unit)
+end)
