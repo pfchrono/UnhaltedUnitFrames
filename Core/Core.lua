@@ -135,7 +135,11 @@ guardianEventFrame:SetScript("OnEvent", function(_, event)
 end)
 
 local minimapPingFrame = CreateFrame("Frame")
-minimapPingFrame:RegisterEvent("MINIMAP_PING")
-minimapPingFrame:SetScript("OnEvent", function(_, _, unit)
-    UUF:ShowPingOnUnit(unit)
-end)
+do
+    local ok = pcall(minimapPingFrame.RegisterEvent, minimapPingFrame, "MINIMAP_PING")
+    if ok then
+        minimapPingFrame:SetScript("OnEvent", function(_, _, unit)
+            UUF:ShowPingOnUnit(unit)
+        end)
+    end
+end
