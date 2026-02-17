@@ -1,47 +1,6 @@
 local _, UUF = ...
 local oUF = UUF.oUF
 
-local function ApplyAuraDuration(cooldown)
-    if not cooldown then return end
-    for _, region in ipairs({ cooldown:GetRegions() }) do
-        if region:GetObjectType() == "FontString" then return region end
-    end
-end
-
-local function ConfigureAuraDuration(icon, unit)
-    local UUFDB = UUF.db.profile
-    local FontsDB = UUFDB.General.Fonts
-    local AurasDB = UUFDB.Units[UUF:GetNormalizedUnit(unit)].Auras
-    local AuraDurationDB = AurasDB.AuraDuration
-    if not icon then return end
-    C_Timer.After(0.01, function()
-        local textRegion = ApplyAuraDuration(icon)
-        if textRegion then
-            if AuraDurationDB.ScaleByIconSize then
-                local iconWidth = icon:GetWidth()
-                local scaleFactor = iconWidth > 0 and iconWidth / 36 or 1
-                local fontSize = AuraDurationDB.FontSize * scaleFactor
-                if fontSize < 1 then fontSize = 12 end
-                textRegion:SetFont(UUF.Media.Font, fontSize, FontsDB.FontFlag)
-            else
-                textRegion:SetFont(UUF.Media.Font, AuraDurationDB.FontSize, FontsDB.FontFlag)
-            end
-            textRegion:SetTextColor(AuraDurationDB.Colour[1], AuraDurationDB.Colour[2], AuraDurationDB.Colour[3], 1)
-            UUF:QueueOrRun(function()
-                textRegion:ClearAllPoints()
-                textRegion:SetPoint(AuraDurationDB.Layout[1], icon, AuraDurationDB.Layout[2], AuraDurationDB.Layout[3], AuraDurationDB.Layout[4])
-            end)
-            if UUF.db.profile.General.Fonts.Shadow.Enabled then
-                textRegion:SetShadowColor(FontsDB.Shadow.Colour[1], FontsDB.Shadow.Colour[2], FontsDB.Shadow.Colour[3], FontsDB.Shadow.Colour[4])
-                textRegion:SetShadowOffset(FontsDB.Shadow.XPos, FontsDB.Shadow.YPos)
-            else
-                textRegion:SetShadowColor(0, 0, 0, 0)
-                textRegion:SetShadowOffset(0, 0)
-            end
-        end
-    end)
-end
-
 local function BuildAuraStyleKey(generalDB, aurasDB)
     local shadow = generalDB.Fonts.Shadow
     local duration = aurasDB.AuraDuration
@@ -68,131 +27,12 @@ end
 
 local function StyleAuras(_, button, unit, auraType)
     if not button or not unit or not auraType then return end
-    local GeneralDB = UUF.db.profile.General
-    local AurasDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Auras
-    if not AurasDB then return end
-    local Buffs = AurasDB.Buffs
-    local Debuffs = AurasDB.Debuffs
-
-    local auraIcon = button.Icon
-    if auraIcon then
-        auraIcon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    end
-
-    local buttonBorder = CreateFrame("Frame", nil, button, "BackdropTemplate")
-    UUF:QueueOrRun(function()
-        buttonBorder:SetAllPoints()
-        buttonBorder:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1, insets = {left = 0, right = 0, top = 0, bottom = 0} })
-        buttonBorder:SetBackdropBorderColor(0, 0, 0, 1)
-    end)
-
-    local auraCooldown = button.Cooldown
-    if auraCooldown then
-        auraCooldown:SetDrawEdge(false)
-        auraCooldown:SetReverse(true)
-        ConfigureAuraDuration(auraCooldown, unit)
-    end
-
-    local auraStacks = button.Count
-    if auraStacks then
-        if auraType == "HELPFUL" then
-            UUF:QueueOrRun(function()
-                auraStacks:ClearAllPoints()
-                auraStacks:SetPoint(Buffs.Count.Layout[1], button, Buffs.Count.Layout[2], Buffs.Count.Layout[3], Buffs.Count.Layout[4])
-            end)
-            auraStacks:SetFont(UUF.Media.Font, Buffs.Count.FontSize, GeneralDB.Fonts.FontFlag)
-            if GeneralDB.Fonts.Shadow.Enabled then
-                auraStacks:SetShadowColor(GeneralDB.Fonts.Shadow.Colour[1], GeneralDB.Fonts.Shadow.Colour[2], GeneralDB.Fonts.Shadow.Colour[3], GeneralDB.Fonts.Shadow.Colour[4])
-                auraStacks:SetShadowOffset(GeneralDB.Fonts.Shadow.XPos, GeneralDB.Fonts.Shadow.YPos)
-            else
-                auraStacks:SetShadowColor(0, 0, 0, 0)
-                auraStacks:SetShadowOffset(0, 0)
-            end
-            auraStacks:SetTextColor(unpack(Buffs.Count.Colour))
-        elseif auraType == "HARMFUL" then
-            UUF:QueueOrRun(function()
-                auraStacks:ClearAllPoints()
-                auraStacks:SetPoint(Debuffs.Count.Layout[1], button, Debuffs.Count.Layout[2], Debuffs.Count.Layout[3], Debuffs.Count.Layout[4])
-            end)
-            auraStacks:SetFont(UUF.Media.Font, Debuffs.Count.FontSize, GeneralDB.Fonts.FontFlag)
-            if GeneralDB.Fonts.Shadow.Enabled then
-                auraStacks:SetShadowColor(GeneralDB.Fonts.Shadow.Colour[1], GeneralDB.Fonts.Shadow.Colour[2], GeneralDB.Fonts.Shadow.Colour[3], GeneralDB.Fonts.Shadow.Colour[4])
-                auraStacks:SetShadowOffset(GeneralDB.Fonts.Shadow.XPos, GeneralDB.Fonts.Shadow.YPos)
-            else
-                auraStacks:SetShadowColor(0, 0, 0, 0)
-                auraStacks:SetShadowOffset(0, 0)
-            end
-            auraStacks:SetTextColor(unpack(Debuffs.Count.Colour))
-        end
-    end
-
-    local auraOverlay = button.Overlay
-    if auraOverlay then
-        auraOverlay:SetTexture("Interface\\AddOns\\UnhaltedUnitFrames\\Media\\Textures\\AuraOverlay.png")
-        UUF:QueueOrRun(function()
-            auraOverlay:ClearAllPoints()
-            auraOverlay:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
-            auraOverlay:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
-            auraOverlay:SetTexCoord(0, 1, 0, 1)
-        end)
-    end
-
-    -- local auraInstanceID = button.auraInstanceID
-    -- local hasExpiration = C_UnitAuras.DoesAuraHaveExpirationTime(unit, auraInstanceID)
+    UUF:StyleAuraButton(button, unit, auraType, true)
 end
 
 local function RestyleAuras(_, button, unit, auraType)
     if not button or not unit or not auraType then return end
-    local GeneralDB = UUF.db.profile.General
-    local AurasDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Auras
-    if not AurasDB then return end
-    local Buffs = AurasDB.Buffs
-    local Debuffs = AurasDB.Debuffs
-
-    local auraIcon = button.Icon
-    if auraIcon then
-        auraIcon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    end
-
-    local auraCooldown = button.Cooldown
-    if auraCooldown then
-        auraCooldown:SetDrawEdge(false)
-        auraCooldown:SetReverse(true)
-        ConfigureAuraDuration(auraCooldown, unit)
-    end
-
-    local auraStacks = button.Count
-    if auraStacks then
-        if auraType == "HELPFUL" then
-            UUF:QueueOrRun(function()
-                auraStacks:ClearAllPoints()
-                auraStacks:SetPoint(Buffs.Count.Layout[1], button, Buffs.Count.Layout[2], Buffs.Count.Layout[3], Buffs.Count.Layout[4])
-            end)
-            auraStacks:SetFont(UUF.Media.Font, Buffs.Count.FontSize, GeneralDB.Fonts.FontFlag)
-            if GeneralDB.Fonts.Shadow.Enabled then
-                auraStacks:SetShadowColor(GeneralDB.Fonts.Shadow.Colour[1], GeneralDB.Fonts.Shadow.Colour[2], GeneralDB.Fonts.Shadow.Colour[3], GeneralDB.Fonts.Shadow.Colour[4])
-                auraStacks:SetShadowOffset(GeneralDB.Fonts.Shadow.XPos, GeneralDB.Fonts.Shadow.YPos)
-            else
-                auraStacks:SetShadowColor(0, 0, 0, 0)
-                auraStacks:SetShadowOffset(0, 0)
-            end
-            auraStacks:SetTextColor(unpack(Buffs.Count.Colour))
-        elseif auraType == "HARMFUL" then
-            UUF:QueueOrRun(function()
-                auraStacks:ClearAllPoints()
-                auraStacks:SetPoint(Debuffs.Count.Layout[1], button, Debuffs.Count.Layout[2], Debuffs.Count.Layout[3], Debuffs.Count.Layout[4])
-            end)
-            auraStacks:SetFont(UUF.Media.Font, Debuffs.Count.FontSize, GeneralDB.Fonts.FontFlag)
-            if GeneralDB.Fonts.Shadow.Enabled then
-                auraStacks:SetShadowColor(GeneralDB.Fonts.Shadow.Colour[1], GeneralDB.Fonts.Shadow.Colour[2], GeneralDB.Fonts.Shadow.Colour[3], GeneralDB.Fonts.Shadow.Colour[4])
-                auraStacks:SetShadowOffset(GeneralDB.Fonts.Shadow.XPos, GeneralDB.Fonts.Shadow.YPos)
-            else
-                auraStacks:SetShadowColor(0, 0, 0, 0)
-                auraStacks:SetShadowOffset(0, 0)
-            end
-            auraStacks:SetTextColor(unpack(Debuffs.Count.Colour))
-        end
-    end
+    UUF:StyleAuraButton(button, unit, auraType, false)
 end
 
 local function CreateUnitBuffs(unitFrame, unit)

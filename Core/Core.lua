@@ -1,5 +1,5 @@
 local _, UUF = ...
-local UnhaltedUnitFrames = LibStub("AceAddon-3.0"):NewAddon("UnhaltedUnitFrames")
+local UnhaltedUnitFrames = LibStub("AceAddon-3.0"):NewAddon("UnhaltedUnitFrames", "AceConsole-3.0", "AceTimer-3.0", "AceBucket-3.0")
 
 function UnhaltedUnitFrames:OnInitialize()
     UUF.db = LibStub("AceDB-3.0"):New("UUFDB", UUF:GetDefaultDB(), true)
@@ -21,26 +21,12 @@ function UnhaltedUnitFrames:OnInitialize()
     playerSpecalizationChangedEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     playerSpecalizationChangedEventFrame:SetScript("OnEvent", function(_, event, ...) if event == "PLAYER_SPECIALIZATION_CHANGED" then local unit = ... if unit == "player" then UUF:UpdateAllUnitFrames() end end end)
 
-    local groupUpdateEventFrame = CreateFrame("Frame")
-    groupUpdateEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-    groupUpdateEventFrame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
-    groupUpdateEventFrame:SetScript("OnEvent", function(_, event)
-        if UUF.db.profile.Units.party.SortOrder == "ROLE" then
-            UUF:CreateTestPartyFrames()
-        end
-    end)
-    local tempGuardianFrame = CreateFrame("Frame")
-    tempGuardianFrame:RegisterEvent("PLAYER_CONTROL_LOST")
-    tempGuardianFrame:RegisterEvent("PLAYER_CONTROL_GAINED")
-    tempGuardianFrame:RegisterEvent("COMPANION_UPDATE")
-    tempGuardianFrame:RegisterEvent("UNIT_PET")
-    tempGuardianFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-    tempGuardianFrame:SetScript("OnEvent", function()
-        -- Refresh pet frame when temporary guardians appear/disappear
-        if UUF.PET then
-            UUF:UpdateUnitFrame(UUF.PET, "pet")
-        end
-    end)
+    -- Batched event bucket for guardian/pet updates (threshold 0.25s)
+    UnhaltedUnitFrames:RegisterBucketEvent({"PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED", "COMPANION_UPDATE", "UNIT_PET", "UNIT_SPELLCAST_SUCCEEDED"}, 0.25, "OnPetUpdate")
+    
+    -- Batched event bucket for group updates (threshold 0.5s)
+    UnhaltedUnitFrames:RegisterBucketEvent({"GROUP_ROSTER_UPDATE", "PLAYER_ROLES_ASSIGNED"}, 0.5, "OnGroupUpdate")
+    
     -- Safe-queue for deferred protected calls during combat lockdown
     UUF._safeQueue = UUF._safeQueue or {}
     local safeQueueFrame = CreateFrame("Frame")
@@ -81,6 +67,18 @@ function UnhaltedUnitFrames:OnEnable()
     UUF:SpawnUnitFrame("boss")
 end
 
+function UnhaltedUnitFrames:OnPetUpdate()
+    if UUF.PET then
+        UUF:UpdateUnitFrame(UUF.PET, "pet")
+    end
+end
+
+function UnhaltedUnitFrames:OnGroupUpdate()
+    if UUF.db.profile.Units.party.SortOrder == "ROLE" then
+        UUF:CreateTestPartyFrames()
+    end
+end
+
 function UUF:GetUnitConfig(unit)
     local normalizedUnit = UUF:GetNormalizedUnit(unit)
     local unitConfig = UUF.db.profile.Units[normalizedUnit]
@@ -102,6 +100,17 @@ function UUF:QueueOrRun(fn)
         UUF._safeQueue[#UUF._safeQueue + 1] = fn
     else
         fn()
+    end
+end
+
+-- Timer management via AceTimer-3.0
+function UUF:ScheduleTimer(timername, delay, func, ...)
+    return UnhaltedUnitFrames:ScheduleTimer(func, delay, ...)
+end
+
+function UUF:CancelTimer(handle)
+    if handle then
+        UnhaltedUnitFrames:CancelTimer(handle, true)
     end
 end
 
