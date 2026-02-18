@@ -9,10 +9,8 @@ local GUIMacros = UUF.GUIMacros or require("Core.Config.GUIMacros")
 local GUIUnits = UUF.GUIUnits or require("Core.Config.GUIUnits")
 local GUITabProfiles = UUF.GUITabProfiles or require("Core.Config.GUITabProfiles")
 local GUITabTags = UUF.GUITabTags or require("Core.Config.GUITabTags")
-local GUICredits = UUF.GUICredits or require("Core.Config.GUICredits")
 local UUFGUI = {}
 local isGUIOpen = false
-local currentTree = nil  -- Reference to active tree for sidebar navigation
 -- Stores last selected tabs: [unit] = { mainTab = "CastBar", subTabs = { CastBar = "Bar" } }
 local lastSelectedUnitTabs = {}
 
@@ -139,42 +137,6 @@ local function DisableCastBarTestMode(unit)
     UUF:CreateTestCastBar(UUF[unit:upper()], unit)
 end
 
-local function EnableTargetTestMode()
-    if UUF.TARGET_TEST_MODE == true then return end
-    UUF.TARGET_TEST_MODE = true
-    UUF:CreateTestTargetFrame()
-end
-
-local function DisableTargetTestMode()
-    if UUF.TARGET_TEST_MODE == false then return end
-    UUF.TARGET_TEST_MODE = false
-    UUF:CreateTestTargetFrame()
-end
-
-local function EnableFocusTestMode()
-    if UUF.FOCUS_TEST_MODE == true then return end
-    UUF.FOCUS_TEST_MODE = true
-    UUF:CreateTestFocusFrame()
-end
-
-local function DisableFocusTestMode()
-    if UUF.FOCUS_TEST_MODE == false then return end
-    UUF.FOCUS_TEST_MODE = false
-    UUF:CreateTestFocusFrame()
-end
-
-local function EnablePetTestMode()
-    if UUF.PET_TEST_MODE == true then return end
-    UUF.PET_TEST_MODE = true
-    UUF:CreateTestPetFrame()
-end
-
-local function DisablePetTestMode()
-    if UUF.PET_TEST_MODE == false then return end
-    UUF.PET_TEST_MODE = false
-    UUF:CreateTestPetFrame()
-end
-
 local function EnableBossFramesTestMode()
     if UUF.BOSS_TEST_MODE == true then return end
     UUF.BOSS_TEST_MODE = true
@@ -204,9 +166,6 @@ local function DisableAllTestModes()
     UUF.CASTBAR_TEST_MODE = false
     UUF.BOSS_TEST_MODE = false
     UUF.PARTY_TEST_MODE = false
-    UUF.TARGET_TEST_MODE = false
-    UUF.FOCUS_TEST_MODE = false
-    UUF.PET_TEST_MODE = false
     for unit, _ in pairs(UUF.db.profile.Units) do
         if UUF[unit:upper()] then
             UUF:CreateTestAuras(UUF[unit:upper()], unit)
@@ -215,9 +174,6 @@ local function DisableAllTestModes()
     end
     UUF:CreateTestBossFrames()
     UUF:CreateTestPartyFrames()
-    UUF:CreateTestTargetFrame()
-    UUF:CreateTestFocusFrame()
-    UUF:CreateTestPetFrame()
 end
 
 local function GenerateSupportText(parentFrame)
@@ -290,7 +246,22 @@ local function CreateFrameMoverSettings(containerParent)
         UUF.db.profile.General.FrameMover = { Enabled = false }
     end
 
-    -- Phase 4: Unlock Frames moved to search component in top bar
+    GUIWidgets.CreateInformationTag(Container, "Unlock frames to drag them with the left mouse button. Re-lock when finished.")
+
+    local Toggle = AG:Create("CheckBox")
+    Toggle:SetLabel("Unlock Frames")
+    Toggle:SetValue(UUF.db.profile.General.FrameMover.Enabled)
+    Toggle:SetFullWidth(true)
+    Toggle:SetCallback("OnValueChanged", function(_, _, value)
+        if InCombatLockdown() then
+            UUF:PrettyPrint("Cannot toggle frame movers in combat.")
+            Toggle:SetValue(UUF.db.profile.General.FrameMover.Enabled)
+            return
+        end
+        UUF.db.profile.General.FrameMover.Enabled = value
+        UUF:ApplyFrameMovers()
+    end)
+    Container:AddChild(Toggle)
 end
 
 local function CreateFontSettings(containerParent)
@@ -2694,12 +2665,6 @@ end
 function UUF:CreateGUI()
     if isGUIOpen then return end
     if InCombatLockdown() then return end
-    
-    -- Clean up any existing tree widget from previous session
-    if currentTree then
-        pcall(function() currentTree:Release() end)
-        currentTree = nil
-    end
 
     isGUIOpen = true
 
@@ -2713,13 +2678,6 @@ function UUF:CreateGUI()
         if UUF.FrameMoverButton then
             UUF.FrameMoverButton:Hide()
         end
-        
-        -- Clean up tree widget before releasing container
-        if currentTree then
-            currentTree:Release()
-            currentTree = nil
-        end
-        
         AG:Release(widget)
         isGUIOpen = false
         DisableAllTestModes()
@@ -2904,372 +2862,26 @@ function UUF:CreateGUI()
         GenerateSupportText(Container)
     end
 
-    -- Phase 4: Define StaticPopup dialogs for reset operation
-    StaticPopupDialogs["UUF_RESET_UNIT_CONFIRM"] = {
-        text = "Reset %s to default settings?",
-        button1 = "Yes",
-        button2 = "No",
-        OnAccept = function(self, data)
-            if data then
-                UUF:ResetUnitToDefaults(data)
-                UUF:PrettyPrint("Reset " .. data .. " to defaults")
-                UUF:UpdateAllUnitFrames()
-            end
-        end,
-        OnCancel = function(self) end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = true,
-    }
-
-    -- Decide whether to use sidebar or classic tabs
-    local useSidebarLayout = UUF.GUI and UUF.GUI.TreeLayout ~= nil
-    
-    if useSidebarLayout then
-        -- Sidebar Layout with Tree Navigation
-        local mainContainer = AG:Create("SimpleGroup")
-        mainContainer:SetFullWidth(true)
-        mainContainer:SetFullHeight(true)
-        mainContainer:SetLayout("Fill")
-        Container:AddChild(mainContainer)
-        
-        -- Create two-column layout for sidebar + content
-        local layoutFrame = CreateFrame("Frame", nil, mainContainer.frame)
-        layoutFrame:SetPoint("TOPLEFT", mainContainer.frame, "TOPLEFT", 0, 0)
-        layoutFrame:SetPoint("BOTTOMRIGHT", mainContainer.frame, "BOTTOMRIGHT", 0, 0)
-        
-        -- Left: Sidebar (200px width)
-        local sidebarFrame = CreateFrame("Frame", nil, layoutFrame, "BackdropTemplate")
-        sidebarFrame:SetPoint("TOPLEFT", 10, -10)
-        sidebarFrame:SetPoint("BOTTOMLEFT", 10, 10)
-        sidebarFrame:SetWidth(200)
-        sidebarFrame:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            edgeFile = "Interface\\Buttons\\WHITE8X8",
-            tile = false, edgeSize = 1,
-        })
-        sidebarFrame:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
-        sidebarFrame:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
-        
-        -- Create tree widget in sidebar
-        local tree = UUF.GUI:CreateTreeWidget(sidebarFrame, 198)
-        currentTree = tree
-        tree:BuildTree()
-        tree:Layout()
-        
-        -- Adjust tree position - now fills entire sidebar
-        tree.scrollFrame:ClearAllPoints()
-        tree.scrollFrame:SetPoint("TOPLEFT", sidebarFrame, "TOPLEFT", 5, -10)
-        tree.scrollFrame:SetPoint("BOTTOMRIGHT", sidebarFrame, "BOTTOMRIGHT", -5, 5)
-        
-        -- Phase 4: Enable keyboard navigation on tree
-        tree.scrollFrame:EnableKeyboard(true)
-        tree.scrollFrame:SetScript("OnKeyDown", function(self, key)
-            tree:HandleKeyDown(key)
-        end)
-        
-        -- Right: Content area (fills remaining space)
-        local contentWrapper = AG:Create("SimpleGroup")
-        contentWrapper:SetLayout("Fill")
-        contentWrapper:SetFullWidth(true)
-        contentWrapper:SetFullHeight(true)
-        
-        local contentFrame = contentWrapper.frame
-        contentFrame:SetParent(layoutFrame)
-        contentFrame:ClearAllPoints()
-        contentFrame:SetPoint("TOPLEFT", sidebarFrame, "TOPRIGHT", 16, 0)
-        contentFrame:SetPoint("BOTTOMRIGHT", layoutFrame, "BOTTOMRIGHT", -10, 10)
-        
-        -- Store content wrapper for node selection
-        Container.contentWrapper = contentWrapper
-        Container.tree = tree
-        
-        -- Handle node selection
-        tree.OnNodeSelected = function(self, nodeId, nodeData)
-            tree:SelectNode(nodeId)
-            
-            -- Phase 4: Track selected unit for copy/paste operations
-            local unit = UUF.GUI:GetUnitFromNodeId(nodeId)
-            if unit then
-                currentTree.selectedUnit = unit
-            end
-            
-            contentWrapper:ReleaseChildren()
-            local ScrollFrame = GUIWidgets.CreateScrollFrame(contentWrapper)
-            
-            -- Route to appropriate content based on node
-            if nodeId == "global" then
-                -- Global parent node - show overview of all global settings
-                GUIGeneral:BuildGlobalSettings(ScrollFrame)
-            elseif nodeId == "global_fonts" then
-                GUIGeneral:BuildFontSettings(ScrollFrame)
-            elseif nodeId == "global_textures" then
-                GUIGeneral:BuildTextureSettings(ScrollFrame)
-            elseif nodeId == "global_colors" then
-                GUIGeneral:BuildColourSettings(ScrollFrame)
-            elseif nodeId == "global_range" then
-                GUIGeneral:BuildRangeSettings(ScrollFrame)
-            elseif nodeId == "tags_global" then
-                GUITabTags:BuildTagSettings(ScrollFrame)
-            elseif nodeId == "credits" then
-                GUICredits:BuildCredits(ScrollFrame)
-            elseif nodeId == "profiles" then
-                GUITabProfiles:BuildProfileSettings(ScrollFrame)
-            elseif nodeId == "templates" or nodeId:match("^template_") then
-                -- Template nodes - show placeholder for now
-                local Label = AG:Create("Label")
-                Label:SetFullWidth(true)
-                Label:SetText("Template settings will allow you to apply changes across all units of a specific element type. This feature is coming soon.")
-                ScrollFrame:AddChild(Label)
-            else
-                -- Unit or element nodes
-                local unit = UUF.GUI:GetUnitFromNodeId(nodeId)
-                local element = UUF.GUI:GetElementFromNode(nodeData)
-                
-                if unit and UUF.db.profile.Units[unit] then
-                    if element then
-                        -- Show specific element for this unit
-                        local ElementGroup = AG:Create("InlineGroup")
-                        ElementGroup:SetFullWidth(true)
-                        ElementGroup:SetTitle(nodeData.label or element)
-                        ScrollFrame:AddChild(ElementGroup)
-                        
-                        -- Route to element-specific builder
-                        local elementKey = element
-                        if elementKey == "frame" then
-                            GUIUnits:CreateFrameSettings(ElementGroup, unit, UUF.db.profile.Units[unit].Frame.AnchorParent and true or false, function() UpdateMultiFrameUnit(unit, function() UUF:UpdateUnitFrame(UUF[unit:upper()], unit) end) end)
-                        elseif elementKey == "healthbar" then
-                            GUIUnits:CreateHealthBarSettings(ElementGroup, unit, function() UpdateMultiFrameUnit(unit, function() UUF:UpdateUnitHealthBar(UUF[unit:upper()], unit) end) end)
-                        elseif elementKey == "powerbar" then
-                            GUIUnits:CreatePowerBarSettings(ElementGroup, unit, function() UpdateMultiFrameUnit(unit, function() UUF:UpdateUnitPowerBar(UUF[unit:upper()], unit) end) end)
-                        elseif elementKey == "castbar" then
-                            GUIUnits:CreateCastBarSettings(ElementGroup, unit)
-                        elseif elementKey == "portrait" then
-                            GUIUnits:CreatePortraitSettings(ElementGroup, unit, function() UpdateMultiFrameUnit(unit, function() UUF:UpdateUnitPortrait(UUF[unit:upper()], unit) end) end)
-                        elseif elementKey == "auras" then
-                            GUIUnits:CreateAuraSettings(ElementGroup, unit)
-                        elseif elementKey == "healprediction" then
-                            GUIUnits:CreateHealPredictionSettings(ElementGroup, unit, function() UpdateMultiFrameUnit(unit, function() UUF:UpdateUnitHealPrediction(UUF[unit:upper()], unit) end) end)
-                        elseif elementKey == "indicators" then
-                            GUIUnits:CreateIndicatorSettings(ElementGroup, unit)
-                        elseif elementKey == "tags" then
-                            GUIUnits:CreateTagsSettings(ElementGroup, unit)
-                        elseif elementKey == "secondarypower" then
-                            GUIUnits:CreateSecondaryPowerBarSettings(ElementGroup, unit, function() UUF:UpdateUnitSecondaryPowerBar(UUF[unit:upper()], unit) end)
-                        elseif elementKey == "alternativepower" then
-                            GUIUnits:CreateAlternativePowerBarSettings(ElementGroup, unit, function() UpdateMultiFrameUnit(unit, function() UUF:UpdateUnitAlternativePowerBar(UUF[unit:upper()], unit) end) end)
-                        else
-                            -- Fallback for unimplemented elements
-                            local Label = AG:Create("Label")
-                            Label:SetFullWidth(true)
-                            Label:SetText("Settings for " .. element .. " are not yet available.")
-                            ElementGroup:AddChild(Label)
-                        end
-                        
-                        -- Enable test modes for relevant elements
-                        if elementKey == "auras" then EnableAurasTestMode(unit) else DisableAurasTestMode(unit) end
-                        if elementKey == "castbar" then EnableCastBarTestMode(unit) else DisableCastBarTestMode(unit) end
-                        
-                        -- For group units (party, boss), ensure test frames are created
-                        if unit == "party" then
-                            EnablePartyFramesTestMode()
-                        elseif unit == "boss" then
-                            EnableBossFramesTestMode()
-                        elseif unit == "target" then
-                            EnableTargetTestMode()
-                        elseif unit == "focus" then
-                            EnableFocusTestMode()
-                        elseif unit == "pet" then
-                            EnablePetTestMode()
-                        end
-                    else
-                        -- Parent unit node clicked - show info and enable/disable toggles
-                        -- Disable individual element test modes
-                        DisableAurasTestMode(unit)
-                        DisableCastBarTestMode(unit)
-                        DisableTargetTestMode()
-                        DisableFocusTestMode()
-                        DisablePetTestMode()
-                        
-                        local InfoGroup = AG:Create("InlineGroup")
-                        InfoGroup:SetFullWidth(true)
-                        InfoGroup:SetTitle((UnitDBToUnitPrettyName[unit] or unit) .. " Settings")
-                        ScrollFrame:AddChild(InfoGroup)
-                        
-                        local InfoLabel = AG:Create("Label")
-                        InfoLabel:SetFullWidth(true)
-                        InfoLabel:SetText("Expand the " .. (UnitDBToUnitPrettyName[unit] or unit) .. " node in the sidebar to access specific settings like Frame, Auras, Cast Bar, etc.\n")
-                        InfoGroup:AddChild(InfoLabel)
-                        
-                        -- Enable/Disable toggles
-                        local EnableToggle = AG:Create("CheckBox")
-                        EnableToggle:SetLabel("Enable |cFFFFCC00" .. (UnitDBToUnitPrettyName[unit] or unit) .. "|r")
-                        EnableToggle:SetValue(UUF.db.profile.Units[unit].Enabled)
-                        EnableToggle:SetCallback("OnValueChanged", function(_, _, value)
-                            StaticPopupDialogs["UUF_RELOAD_UI"] = {
-                                text = "You must reload to apply this change, do you want to reload now?",
-                                button1 = "Reload Now",
-                                button2 = "Later",
-                                showAlert = true,
-                                OnAccept = function() UUF.db.profile.Units[unit].Enabled = value C_UI.Reload() end,
-                                OnCancel = function() EnableToggle:SetValue(UUF.db.profile.Units[unit].Enabled) ScrollFrame:DoLayout() end,
-                                timeout = 0,
-                                whileDead = true,
-                                hideOnEscape = true,
-                            }
-                            StaticPopup_Show("UUF_RELOAD_UI")
-                        end)
-                        EnableToggle:SetRelativeWidth(0.5)
-                        InfoGroup:AddChild(EnableToggle)
-                        
-                        local HideBlizzToggle = AG:Create("CheckBox")
-                        HideBlizzToggle:SetLabel("Hide Blizzard |cFFFFCC00" .. (UnitDBToUnitPrettyName[unit] or unit) .. "|r")
-                        HideBlizzToggle:SetValue(UUF.db.profile.Units[unit].ForceHideBlizzard)
-                        HideBlizzToggle:SetCallback("OnValueChanged", function(_, _, value)
-                            StaticPopupDialogs["UUF_RELOAD_UI"] = {
-                                text = "You must reload to apply this change, do you want to reload now?",
-                                button1 = "Reload Now",
-                                button2 = "Later",
-                                showAlert = true,
-                                OnAccept = function() UUF.db.profile.Units[unit].ForceHideBlizzard = value C_UI.Reload() end,
-                                OnCancel = function() HideBlizzToggle:SetValue(UUF.db.profile.Units[unit].ForceHideBlizzard) ScrollFrame:DoLayout() end,
-                                timeout = 0,
-                                whileDead = true,
-                                hideOnEscape = true,
-                            }
-                            StaticPopup_Show("UUF_RELOAD_UI")
-                        end)
-                        HideBlizzToggle:SetRelativeWidth(0.5)
-                        HideBlizzToggle:SetDisabled(not UUF.db.profile.Units[unit].Enabled)
-                        InfoGroup:AddChild(HideBlizzToggle)
-                        
-                        -- Party-specific options
-                        if unit == "party" then
-                            local HidePlayerToggle = AG:Create("CheckBox")
-                            HidePlayerToggle:SetLabel("Hide |cFFFFCC00Player|r in Party Frames")
-                            HidePlayerToggle:SetValue(UUF.db.profile.Units[unit].HidePlayer)
-                            HidePlayerToggle:SetCallback("OnValueChanged", function(_, _, value)
-                                UUF.db.profile.Units[unit].HidePlayer = value
-                                UUF:LayoutPartyFrames()
-                            end)
-                            HidePlayerToggle:SetRelativeWidth(0.5)
-                            InfoGroup:AddChild(HidePlayerToggle)
-                            
-                            local SortOrderDropdown = AG:Create("Dropdown")
-                            SortOrderDropdown:SetLabel("Sort Order")
-                            SortOrderDropdown:SetList({
-                                ["DEFAULT"] = "Default",
-                                ["ROLE"] = "By Role (Tank > Healer > DPS)"
-                            })
-                            SortOrderDropdown:SetValue(UUF.db.profile.Units[unit].SortOrder or "DEFAULT")
-                            SortOrderDropdown:SetCallback("OnValueChanged", function(_, _, value)
-                                UUF.db.profile.Units[unit].SortOrder = value
-                                UUF:LayoutPartyFrames()
-                            end)
-                            SortOrderDropdown:SetRelativeWidth(0.5)
-                            InfoGroup:AddChild(SortOrderDropdown)
-                        end
-                    end
-                    
-                    -- Enable test modes for boss/party
-                    if unit == "boss" then
-                        EnableBossFramesTestMode()
-                    else
-                        DisableBossFramesTestMode()
-                    end
-                    if unit == "party" then
-                        EnablePartyFramesTestMode()
-                    else
-                        DisablePartyFramesTestMode()
-                    end
-                    if unit == "target" then
-                        EnableTargetTestMode()
-                    else
-                        DisableTargetTestMode()
-                    end
-                    if unit == "focus" then
-                        EnableFocusTestMode()
-                    else
-                        DisableFocusTestMode()
-                    end
-                    if unit == "pet" then
-                        EnablePetTestMode()
-                    else
-                        DisablePetTestMode()
-                    end
-                end
-            end
-            
-            ScrollFrame:DoLayout()
-            GenerateSupportText(Container)
-        end
-        
-        -- Select initial node (expand parent nodes if needed)
-        local initialNode = UUF.db.profile.GUI.LastSelectedNode or "player_frame"
-        local initialNodeData = UUF.GUI:FindNode(initialNode)
-        
-        -- Expand all parent nodes to make this node visible
-        local function expandParents(nodeId)
-            -- Find the button for this node
-            local targetBtn
-            local targetIndex
-            for i, btn in ipairs(tree.nodeButtons) do
-                if btn.nodeId == nodeId then
-                    targetBtn = btn
-                    targetIndex = i
-                    break
-                end
-            end
-            
-            if not targetBtn then return end
-            
-            -- Walk backwards to find parent (previous node with lower indent)
-            local parentIndent = targetBtn.indentLevel - 1
-            if parentIndent < 0 then return end
-            
-            for i = targetIndex - 1, 1, -1 do
-                local btn = tree.nodeButtons[i]
-                if btn.indentLevel == parentIndent and btn.hasChildren then
-                    -- Found parent, expand it
-                    if not btn.expanded then
-                        btn.expanded = true
-                        if UUF.db and UUF.db.profile.GUI then
-                            UUF.db.profile.GUI.ExpandedNodes[btn.nodeId] = true
-                        end
-                    end
-                    -- Recursively expand its parents
-                    expandParents(btn.nodeId)
-                    break
-                end
-            end
-        end
-        
-        expandParents(initialNode)
-        tree:Layout()
-        tree.OnNodeSelected(tree, initialNode, initialNodeData)
-    else
-        -- Classic Tab Layout (existing code)
-        local ContainerTabGroup = AG:Create("TabGroup")
-        ContainerTabGroup:SetLayout("Flow")
-        ContainerTabGroup:SetFullWidth(true)
-        ContainerTabGroup:SetTabs({
-            { text = "General", value = "General"},
-            { text = "Global", value = "Global"},
-            { text = "Player", value = "Player"},
-            { text = "Target", value = "Target"},
-            { text = "Target of Target", value = "TargetTarget"},
-            { text = "Pet", value = "Pet"},
-            { text = "Focus", value = "Focus"},
-            { text = "Focus Target", value = "FocusTarget"},
-            { text = "Party", value = "Party"},
-            { text = "Boss", value = "Boss"},
-            { text = "Tags", value = "Tags"},
-            { text = "Profiles", value = "Profiles"},
-        })
-        ContainerTabGroup:SetCallback("OnGroupSelected", SelectTab)
-        ContainerTabGroup:SelectTab("General")
-        Container:AddChild(ContainerTabGroup)
-    end
+    local ContainerTabGroup = AG:Create("TabGroup")
+    ContainerTabGroup:SetLayout("Flow")
+    ContainerTabGroup:SetFullWidth(true)
+    ContainerTabGroup:SetTabs({
+        { text = "General", value = "General"},
+        { text = "Global", value = "Global"},
+        { text = "Player", value = "Player"},
+        { text = "Target", value = "Target"},
+        { text = "Target of Target", value = "TargetTarget"},
+        { text = "Pet", value = "Pet"},
+        { text = "Focus", value = "Focus"},
+        { text = "Focus Target", value = "FocusTarget"},
+        { text = "Party", value = "Party"},
+        { text = "Boss", value = "Boss"},
+        { text = "Tags", value = "Tags"},
+        { text = "Profiles", value = "Profiles"},
+    })
+    ContainerTabGroup:SetCallback("OnGroupSelected", SelectTab)
+    ContainerTabGroup:SelectTab("General")
+    Container:AddChild(ContainerTabGroup)
 end
 
 function UUF:ToggleGUI()
