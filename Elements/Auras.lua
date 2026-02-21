@@ -6,6 +6,7 @@ local CreateFrame = CreateFrame
 local type, pairs, ipairs = type, pairs, ipairs
 local select = select
 local math_floor = math.floor
+local GameTooltip = GameTooltip
 
 -- Performance Optimization: Frame Pooling for Aura Buttons
 -- =========================================================
@@ -18,23 +19,138 @@ local math_floor = math.floor
 -- See Core/FramePoolManager.lua for pool management API
 
 local USE_AURA_POOLING = true  -- Set to true to enable frame pooling (ENABLED for production)
+local RestyleAuras
 
-local function CreateAuraButton_Pooled(pool, unit, auraType)
-    local button = pool:Acquire()
-    if button then
-        button:ClearAllPoints()
-        button:Show()
-        button._poolName = unit .. "_" .. auraType
+local AURA_POOL_NAME = "AuraButton"
+
+local function AuraButton_UpdateTooltip(self)
+    if not GameTooltip or GameTooltip:IsForbidden() then return end
+    local parent = self:GetParent()
+    if not parent or not parent.__owner or not self.auraInstanceID then return end
+    GameTooltip:SetUnitAuraByAuraInstanceID(parent.__owner.unit, self.auraInstanceID)
+end
+
+local function AuraButton_OnEnter(self)
+    if not GameTooltip or GameTooltip:IsForbidden() or not self:IsVisible() then return end
+    local parent = self:GetParent()
+    GameTooltip:SetOwner(self, parent and parent.__restricted and "ANCHOR_CURSOR" or (parent and parent.tooltipAnchor) or "ANCHOR_CURSOR")
+    AuraButton_UpdateTooltip(self)
+end
+
+local function AuraButton_OnLeave()
+    if not GameTooltip or GameTooltip:IsForbidden() then return end
+    GameTooltip:Hide()
+end
+
+local function EnsureAuraButtonWidgets(button, element)
+    if button._uufAuraButtonInit then
+        button:SetParent(element)
+        return
     end
+
+    button:SetParent(element)
+
+    local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+    cooldown:SetAllPoints()
+    button.Cooldown = cooldown
+
+    local icon = button:CreateTexture(nil, "BORDER")
+    icon:SetAllPoints()
+    button.Icon = icon
+
+    local countFrame = CreateFrame("Frame", nil, button)
+    countFrame:SetAllPoints(button)
+    countFrame:SetFrameLevel(cooldown:GetFrameLevel() + 1)
+
+    local count = countFrame:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    count:SetPoint("BOTTOMRIGHT", countFrame, "BOTTOMRIGHT", -1, 0)
+    button.Count = count
+
+    local overlay = button:CreateTexture(nil, "OVERLAY")
+    overlay:SetTexture([[Interface\Buttons\UI-Debuff-Overlays]])
+    overlay:SetAllPoints()
+    overlay:SetTexCoord(0.296875, 0.5703125, 0, 0.515625)
+    button.Overlay = overlay
+
+    local stealable = button:CreateTexture(nil, "OVERLAY")
+    stealable:SetTexture([[Interface\TargetingFrame\UI-TargetingFrame-Stealable]])
+    stealable:SetPoint("TOPLEFT", -3, 3)
+    stealable:SetPoint("BOTTOMRIGHT", 3, -3)
+    stealable:SetBlendMode("ADD")
+    button.Stealable = stealable
+
+    button.UpdateTooltip = AuraButton_UpdateTooltip
+    button:SetScript("OnEnter", AuraButton_OnEnter)
+    button:SetScript("OnLeave", AuraButton_OnLeave)
+    button._uufAuraButtonInit = true
+end
+
+function UUF:InitAuraPooling()
+    if not USE_AURA_POOLING or not UUF.FramePoolManager then return false end
+    if UUF._auraPoolingInitialized then return true end
+
+    local initialSize = 60
+    if UUF.db and UUF.db.profile and UUF.db.profile.Units then
+        local maxPerFrame = 0
+        for _, unitDB in pairs(UUF.db.profile.Units) do
+            if unitDB and unitDB.Auras and unitDB.Auras.Buffs and unitDB.Auras.Debuffs then
+                local num = (unitDB.Auras.Buffs.Num or 0) + (unitDB.Auras.Debuffs.Num or 0)
+                if num > maxPerFrame then maxPerFrame = num end
+            end
+        end
+        if maxPerFrame > 0 then
+            initialSize = math.max(40, math.floor(maxPerFrame * 1.5))
+        end
+    end
+
+    UUF.FramePoolManager:GetOrCreatePool(AURA_POOL_NAME, "Button", UIParent, nil, initialSize)
+    UUF._auraPoolingInitialized = true
+    return true
+end
+
+local function AcquireAuraButton(element, index, unit, auraType)
+    local button
+
+    if USE_AURA_POOLING and UUF:InitAuraPooling() then
+        button = UUF.FramePoolManager:Acquire(AURA_POOL_NAME)
+    end
+
+    if not button then
+        button = CreateFrame("Button", element:GetDebugName() .. "Button" .. index, element)
+    end
+
+    EnsureAuraButtonWidgets(button, element)
+    button:ClearAllPoints()
+    button:Show()
+    button._uufAuraType = auraType
+
+    if not button._uufPostCreateFired and element.PostCreateButton then
+        element:PostCreateButton(button)
+        button._uufPostCreateFired = true
+    else
+        RestyleAuras(nil, button, unit, auraType)
+    end
+
     return button
 end
 
-local function ReleaseAuraButton_Pooled(pool, button)
-    if button then
-        button:Hide()
-        button:ClearAllPoints()
-        pool:Release(button)
+local function ReleaseAuraButtons(container)
+    if not container then return end
+    if not USE_AURA_POOLING or not UUF.FramePoolManager then return end
+
+    for i = #container, 1, -1 do
+        local button = container[i]
+        if button then
+            button:Hide()
+            button:ClearAllPoints()
+            UUF.FramePoolManager:Release(AURA_POOL_NAME, button)
+        end
+        container[i] = nil
     end
+
+    container.createdButtons = 0
+    container.anchoredButtons = 0
+    container.visibleButtons = 0
 end
 
 local function BuildAuraStyleKey(generalDB, aurasDB)
@@ -66,7 +182,7 @@ local function StyleAuras(_, button, unit, auraType)
     UUF:StyleAuraButton(button, unit, auraType, true)
 end
 
-local function RestyleAuras(_, button, unit, auraType)
+RestyleAuras = function(_, button, unit, auraType)
     if not button or not unit or not auraType then return end
     UUF:StyleAuraButton(button, unit, auraType, false)
 end
@@ -91,6 +207,9 @@ local function CreateUnitBuffs(unitFrame, unit)
         unitFrame.BuffContainer["growthX"] = BuffsDB.GrowthDirection
         unitFrame.BuffContainer["growthY"] = BuffsDB.WrapDirection
         unitFrame.BuffContainer.filter = BuffsDB.Filter or "HELPFUL"
+        unitFrame.BuffContainer.CreateButton = function(element, index)
+            return AcquireAuraButton(element, index, unit, "HELPFUL")
+        end
         unitFrame.BuffContainer.PostCreateButton = function(_, button) StyleAuras(_, button, unit, "HELPFUL") end
         unitFrame.BuffContainer.anchoredButtons = 0
         unitFrame.BuffContainer.createdButtons = 0
@@ -133,6 +252,9 @@ local function CreateUnitDebuffs(unitFrame, unit)
         unitFrame.DebuffContainer["growthX"] = DebuffsDB.GrowthDirection
         unitFrame.DebuffContainer["growthY"] = DebuffsDB.WrapDirection
         unitFrame.DebuffContainer.filter = DebuffsDB.Filter or "HARMFUL"
+        unitFrame.DebuffContainer.CreateButton = function(element, index)
+            return AcquireAuraButton(element, index, unit, "HARMFUL")
+        end
         unitFrame.DebuffContainer.anchoredButtons = 0
         unitFrame.DebuffContainer.createdButtons = 0
         unitFrame.DebuffContainer.PostCreateButton = function(_, button) StyleAuras(_, button, unit, "HARMFUL") end
@@ -192,6 +314,7 @@ function UUF:UpdateUnitAuras(unitFrame, unit)
         unitFrame.BuffContainer.showBuffType = BuffsDB.ShowType
         UUF:QueueOrRun(function() unitFrame.BuffContainer:Show() end)
     else
+        ReleaseAuraButtons(unitFrame.BuffContainer)
         UUF:QueueOrRun(function() unitFrame.BuffContainer:Hide() end)
         unitFrame.Buffs = nil
     end
@@ -223,6 +346,7 @@ function UUF:UpdateUnitAuras(unitFrame, unit)
         unitFrame.DebuffContainer.showDebuffType = DebuffsDB.ShowType
         UUF:QueueOrRun(function() unitFrame.DebuffContainer:Show() end)
     else
+        ReleaseAuraButtons(unitFrame.DebuffContainer)
         UUF:QueueOrRun(function() unitFrame.DebuffContainer:Hide() end)
         unitFrame.Debuffs = nil
     end
@@ -261,6 +385,9 @@ function UUF:UpdateUnitAuras(unitFrame, unit)
 end
 
 function UUF:CreateUnitAuras(unitFrame, unit)
+    if USE_AURA_POOLING then
+        UUF:InitAuraPooling()
+    end
     CreateUnitBuffs(unitFrame, unit)
     CreateUnitDebuffs(unitFrame, unit)
 end

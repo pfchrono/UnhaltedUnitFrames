@@ -15,6 +15,10 @@ local Defaults = {
                 Enabled = false,
                 Scale = 1.0,
             },
+            GUISize = {
+                Width = 900,
+                Height = 650,
+            },
             FrameMover = {
                 Enabled = false,
             },
@@ -78,6 +82,17 @@ local Defaults = {
                 }
             },
             LDB = {},  -- LibDataBroker icon position storage
+            aurasCooldownTextUseBuckets = true,
+            aurasCooldownTextSafeSeconds = 60,
+            aurasCooldownTextWarningSeconds = 15,
+            aurasCooldownTextUrgentSeconds = 5,
+            aurasCooldownTextSafeColor = {1, 1, 1, 1},
+            aurasCooldownTextWarningColor = {1, 0.85, 0.2, 1},
+            aurasCooldownTextUrgentColor = {1, 0.45, 0.1, 1},
+            aurasCooldownTextExpireColor = {1, 0.12, 0.12, 1},
+            aurasOwnBuffHighlightColor = {1, 0.85, 0.2},
+            aurasOwnDebuffHighlightColor = {1, 0.3, 0.3},
+            aurasStackCountColor = {1, 1, 1},
         },
         EditModeLayouts = {},
         Units = {
@@ -110,18 +125,20 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
-                        Height = 40,
+                        Height = 60,
                     },
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
-                        Height = 40,
+                        Height = 60,
                     },
                     IncomingHeals = {
                         Enabled = true,
@@ -130,7 +147,7 @@ local Defaults = {
                         ColourPlayer = {0/255, 255/255, 0/255, 0.4},
                         ColourOther = {0/255, 179/255, 0/255, 0.3},
                         Position = "ATTACH",
-                        Height = 40,
+                        Height = 60,
                         Overflow = 1.05,
                     },
                 },
@@ -193,7 +210,38 @@ local Defaults = {
                             Layout = {"RIGHT", "RIGHT", -3, 0},
                             Colour = {1, 1, 1},
                         }
-                    }
+                    },
+                    TimerDirection = {
+                        Enabled = false,
+                        Type = "ARROW",
+                        Size = 12,
+                        Colour = {1, 1, 1, 1},
+                        Layout = {"BOTTOM", "CENTER", 0, -8},
+                    },
+                    ChannelTicks = {
+                        Enabled = false,
+                        Colour = {0.5, 1, 0.5, 1},
+                        Opacity = 0.8,
+                        Width = 8,
+                        Height = 28,
+                        Texture = "Interface\\CastingBar\\UI-CastingBar-Tick",
+                    },
+                    EmpowerStages = {
+                        Enabled = false,
+                        Style = "BOXES",
+                        Colour = {1, 1, 0, 1},
+                        Width = 12,
+                        Height = 20,
+                    },
+                    LatencyIndicator = {
+                        Enabled = false,
+                        ShowValue = true,
+                        HighLatencyThreshold = 150,
+                    },
+                    Performance = {
+                        SimplifyForLargeGroups = false,
+                        GroupSizeThreshold = 15,
+                    },
                 },
                 Portrait = {
                     Enabled = false,
@@ -308,7 +356,7 @@ local Defaults = {
                         Opacity = 0.7,
                         BackgroundOpacity = 0.5,
                         FrameStrata = "MEDIUM",
-                    },
+                    }
                 },
                 Auras = {
                     FrameStrata = "LOW",
@@ -415,18 +463,20 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
-                        Height = 40,
+                        Height = 60,
                     },
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
-                        Height = 40,
+                        Height = 60,
                     },
                     IncomingHeals = {
                         Enabled = true,
@@ -435,7 +485,7 @@ local Defaults = {
                         ColourPlayer = {0/255, 255/255, 0/255, 0.4},
                         ColourOther = {0/255, 179/255, 0/255, 0.3},
                         Position = "ATTACH",
-                        Height = 40,
+                        Height = 60,
                         Overflow = 1.05,
                     },
                 },
@@ -582,7 +632,7 @@ local Defaults = {
                         Opacity = 0.7,
                         BackgroundOpacity = 0.5,
                         FrameStrata = "MEDIUM",
-                    },
+                    }
                 },
                 Range = {
                     Enabled = true,
@@ -690,7 +740,8 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
                         Height = 20,
@@ -698,7 +749,8 @@ local Defaults = {
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
                         Height = 20,
@@ -888,7 +940,8 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
                         Height = 20,
@@ -896,7 +949,8 @@ local Defaults = {
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
                         Height = 20,
@@ -1053,7 +1107,7 @@ local Defaults = {
                         Enabled = true,
                         OnlyShowPlayer = false,
                         Size = 22,
-                        Layout = {"RIGHT", "LEFT", -1, 0, 1},
+                        Layout = {"LEFT", "RIGHT", 1, 0, 1},
                         Num = 1,
                         Wrap = 1,
                         GrowthDirection = "LEFT",
@@ -1070,7 +1124,7 @@ local Defaults = {
                         Enabled = false,
                         OnlyShowPlayer = false,
                         Size = 22,
-                        Layout = {"LEFT", "RIGHT", 1, 0, 1},
+                        Layout = {"RIGHT", "LEFT", -1, 0, 1},
                         Num = 3,
                         Wrap = 3,
                         GrowthDirection = "RIGHT",
@@ -1142,7 +1196,8 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
                         Height = 20,
@@ -1150,7 +1205,8 @@ local Defaults = {
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
                         Height = 20,
@@ -1247,7 +1303,7 @@ local Defaults = {
                         Enabled = false,
                         OnlyShowPlayer = false,
                         Size = 22,
-                        Layout = {"RIGHT", "LEFT", -1, 0, 1},
+                        Layout = {"LEFT", "RIGHT", 1, 0, 1},
                         Num = 3,
                         Wrap = 3,
                         GrowthDirection = "LEFT",
@@ -1264,7 +1320,7 @@ local Defaults = {
                         Enabled = false,
                         OnlyShowPlayer = false,
                         Size = 22,
-                        Layout = {"LEFT", "RIGHT", 1, 0, 1},
+                        Layout = {"RIGHT", "LEFT", -1, 0, 1},
                         Num = 3,
                         Wrap = 3,
                         GrowthDirection = "RIGHT",
@@ -1336,7 +1392,8 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
                         Height = 20,
@@ -1344,7 +1401,8 @@ local Defaults = {
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
                         Height = 20,
@@ -1513,7 +1571,7 @@ local Defaults = {
                 SortOrder = "DEFAULT",
                 Frame = {
                     Width = 150,
-                    Height = 40,
+                    Height = 60,
                     Layout = {"CENTER", "CENTER", -500, 0, -1},
                     GrowthDirection = "DOWN",
                     FrameStrata = "LOW",
@@ -1534,18 +1592,20 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
-                        Height = 40,
+                        Height = 60,
                     },
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
-                        Height = 40,
+                        Height = 60,
                     },
                     IncomingHeals = {
                         Enabled = true,
@@ -1554,7 +1614,7 @@ local Defaults = {
                         ColourPlayer = {0/255, 255/255, 0/255, 0.4},
                         ColourOther = {0/255, 179/255, 0/255, 0.3},
                         Position = "ATTACH",
-                        Height = 40,
+                        Height = 60,
                         Overflow = 1.05,
                     },
                 },
@@ -1799,18 +1859,20 @@ local Defaults = {
                     Absorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {255/255, 204/255, 0/255, 1.0},
                         Position = "LEFT",
-                        Height = 40,
+                        Height = 60,
                     },
                     HealAbsorbs = {
                         Enabled = true,
                         ShowGlow = true,
-                        OverlayOpacity = 0.5,
+                        OverlayOpacity = 0.8,
+                        GlowOpacity = 1.0,
                         Colour = {128/255, 64/255, 255/255, 1.0},
                         Position = "RIGHT",
-                        Height = 40,
+                        Height = 60,
                     },
                     IncomingHeals = {
                         Enabled = true,
@@ -1819,7 +1881,7 @@ local Defaults = {
                         ColourPlayer = {0/255, 255/255, 0/255, 0.4},
                         ColourOther = {0/255, 179/255, 0/255, 0.3},
                         Position = "ATTACH",
-                        Height = 40,
+                        Height = 60,
                         Overflow = 1.05,
                     },
                 },
@@ -2060,5 +2122,9 @@ local Defaults = {
     },
 }
 
----@return table Defaults Returns the Default Table.
-function UUF:GetDefaultDB() return Defaults end
+-- Castbar enhancements defaults merge is handled in Core.lua after full initialization
+
+-- Export the default database template
+function UUF:GetDefaultDB()
+    return Defaults
+end

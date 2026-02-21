@@ -190,6 +190,13 @@ function UnhaltedUnitFrames:OnEnable()
             UUF.Validator:RunFullValidation()
         end)
     end
+    
+    -- Merge castbar enhancement defaults after all systems are initialized
+    C_Timer.After(0.5, function()
+        if UUF.MergeCastBarDefaults then
+            UUF:MergeCastBarDefaults()
+        end
+    end)
 end
 
 function UnhaltedUnitFrames:OnPetUpdate()
@@ -257,6 +264,43 @@ end
 function UUF:CancelTimer(handle)
     if handle then
         UnhaltedUnitFrames:CancelTimer(handle, true)
+    end
+end
+
+-- Merge castbar enhancement defaults into all unit configs
+function UUF:MergeCastBarDefaults()
+    if not UUF.db or not UUF.CastBarDefaults then return end
+    if UUF._castbarDefaultsMerged then return end  -- Only merge once
+    
+    UUF._castbarDefaultsMerged = true
+    
+    -- Simple table copy function (handles non-table values)
+    local function CopyTable(src)
+        if type(src) ~= "table" then
+            return src  -- Return non-table values as-is
+        end
+        local result = {}
+        for k, v in pairs(src) do
+            if type(v) == "table" then
+                result[k] = CopyTable(v)
+            else
+                result[k] = v
+            end
+        end
+        return result
+    end
+    
+    -- Merge into all unit types
+    local units = {"player", "target", "targettarget", "focus", "focustarget", "pet", "party", "boss"}
+    for _, unit in ipairs(units) do
+        if UUF.db.profile.Units[unit] and UUF.db.profile.Units[unit].CastBar then
+            -- Merge new feature tables from CastBarDefaults, preserving existing values
+            for featureKey, featureConfig in pairs(UUF.CastBarDefaults) do
+                if UUF.db.profile.Units[unit].CastBar[featureKey] == nil then
+                    UUF.db.profile.Units[unit].CastBar[featureKey] = CopyTable(featureConfig)
+                end
+            end
+        end
     end
 end
 
