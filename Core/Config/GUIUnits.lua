@@ -1046,124 +1046,125 @@ function GUIUnits:CreateCastBarEnhancementsSettings(containerParent, unit, updat
 
     local EnhancementsContainer = AG:Create("SimpleGroup")
     EnhancementsContainer:SetLayout("Flow")
+    EnhancementsContainer:SetFullWidth(true)
     containerParent:AddChild(EnhancementsContainer)
 
-    -- ==== ROW 1: TIMER DIRECTION & CHANNEL TICKS (side by side) ====
+    -- ==== TIMER DIRECTION (Left Column) ====
     local TimerDirGroup = GUIWidgets.CreateInlineGroup(EnhancementsContainer, "Timer Direction")
-    TimerDirGroup:SetRelativeWidth(0.48)
+    TimerDirGroup:SetRelativeWidth(0.33)
     
     local TimerDirToggle = AG:Create("CheckBox")
-    TimerDirToggle:SetLabel("Enable Timer Direction")
+    TimerDirToggle:SetLabel("Enable")
     TimerDirToggle:SetValue(CastBarDB.TimerDirection.Enabled)
     TimerDirToggle:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.TimerDirection.Enabled = value updateCallback() RefreshEnhancementsGUI() end)
-    TimerDirToggle:SetRelativeWidth(1.0)
+    TimerDirToggle:SetFullWidth(true)
     TimerDirGroup:AddChild(TimerDirToggle)
     
     local TimerDirTypeDropdown = AG:Create("Dropdown")
     TimerDirTypeDropdown:SetList({["ARROW"] = "Arrow", ["TEXT"] = "Text", ["BAR"] = "Bar"})
-    TimerDirTypeDropdown:SetLabel("Timer Display Type")
+    TimerDirTypeDropdown:SetLabel("Display Type")
     TimerDirTypeDropdown:SetValue(CastBarDB.TimerDirection.Type)
     TimerDirTypeDropdown:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.TimerDirection.Type = value updateCallback() end)
-    TimerDirTypeDropdown:SetRelativeWidth(1.0)
+    TimerDirTypeDropdown:SetFullWidth(true)
     TimerDirGroup:AddChild(TimerDirTypeDropdown)
 
     local TimerDirColour = CastBarDB.TimerDirection.Colour or {1, 1, 1, 1}
     local TimerDirColourPicker = AG:Create("ColorPicker")
-    TimerDirColourPicker:SetLabel("Timer Direction Color")
+    TimerDirColourPicker:SetLabel("Color")
     TimerDirColourPicker:SetColor(TimerDirColour[1], TimerDirColour[2], TimerDirColour[3], TimerDirColour[4])
     TimerDirColourPicker:SetCallback("OnValueChanged", function(_, _, r, g, b, a) CastBarDB.TimerDirection.Colour = {r, g, b, a} updateCallback() end)
-    TimerDirColourPicker:SetRelativeWidth(1.0)
+    TimerDirColourPicker:SetFullWidth(true)
     TimerDirGroup:AddChild(TimerDirColourPicker)
 
-    -- ==== CHANNEL TICKS (right of Timer Direction) ====
+    -- ==== CHANNEL TICKS (Middle Column) ====
     local ChannelTicksGroup = GUIWidgets.CreateInlineGroup(EnhancementsContainer, "Channel Ticks")
-    ChannelTicksGroup:SetRelativeWidth(0.48)
+    ChannelTicksGroup:SetRelativeWidth(0.33)
     
     local ChannelTicksToggle = AG:Create("CheckBox")
-    ChannelTicksToggle:SetLabel("Enable Channel Tick Markers")
+    ChannelTicksToggle:SetLabel("Enable")
     ChannelTicksToggle:SetValue(CastBarDB.ChannelTicks.Enabled)
     ChannelTicksToggle:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.ChannelTicks.Enabled = value updateCallback() RefreshEnhancementsGUI() end)
-    ChannelTicksToggle:SetRelativeWidth(1.0)
+    ChannelTicksToggle:SetFullWidth(true)
     ChannelTicksGroup:AddChild(ChannelTicksToggle)
 
     local TickColour = CastBarDB.ChannelTicks.Colour or {0.5, 1, 0.5, 1}
     local ChannelTicksColourPicker = AG:Create("ColorPicker")
-    ChannelTicksColourPicker:SetLabel("Tick Color")
+    ChannelTicksColourPicker:SetLabel("Color")
     ChannelTicksColourPicker:SetColor(TickColour[1], TickColour[2], TickColour[3], TickColour[4])
     ChannelTicksColourPicker:SetCallback("OnValueChanged", function(_, _, r, g, b, a) CastBarDB.ChannelTicks.Colour = {r, g, b, a} updateCallback() end)
-    ChannelTicksColourPicker:SetRelativeWidth(0.5)
+    ChannelTicksColourPicker:SetFullWidth(true)
     ChannelTicksGroup:AddChild(ChannelTicksColourPicker)
 
     local ChannelTicksOpacitySlider = AG:Create("Slider")
-    ChannelTicksOpacitySlider:SetLabel("Tick Opacity")
+    ChannelTicksOpacitySlider:SetLabel("Opacity")
     ChannelTicksOpacitySlider:SetValue(CastBarDB.ChannelTicks.Opacity or 0.8)
     ChannelTicksOpacitySlider:SetSliderValues(0, 1, 0.05)
     ChannelTicksOpacitySlider:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.ChannelTicks.Opacity = value updateCallback() end)
-    ChannelTicksOpacitySlider:SetRelativeWidth(0.5)
+    ChannelTicksOpacitySlider:SetFullWidth(true)
     ChannelTicksGroup:AddChild(ChannelTicksOpacitySlider)
 
     local ChannelTicksWidthSlider = AG:Create("Slider")
-    ChannelTicksWidthSlider:SetLabel("Tick Width")
+    ChannelTicksWidthSlider:SetLabel("Width")
     ChannelTicksWidthSlider:SetValue(CastBarDB.ChannelTicks.Width or 8)
     ChannelTicksWidthSlider:SetSliderValues(2, 20, 1)
     ChannelTicksWidthSlider:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.ChannelTicks.Width = value updateCallback() end)
-    ChannelTicksWidthSlider:SetRelativeWidth(0.5)
+    ChannelTicksWidthSlider:SetFullWidth(true)
     ChannelTicksGroup:AddChild(ChannelTicksWidthSlider)
 
     local ChannelTicksHeightSlider = AG:Create("Slider")
-    ChannelTicksHeightSlider:SetLabel("Tick Height")
+    ChannelTicksHeightSlider:SetLabel("Height")
     ChannelTicksHeightSlider:SetValue(CastBarDB.ChannelTicks.Height or 28)
     ChannelTicksHeightSlider:SetSliderValues(10, 50, 1)
     ChannelTicksHeightSlider:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.ChannelTicks.Height = value updateCallback() end)
-    ChannelTicksHeightSlider:SetRelativeWidth(0.5)
+    ChannelTicksHeightSlider:SetFullWidth(true)
     ChannelTicksGroup:AddChild(ChannelTicksHeightSlider)
 
-    -- ==== ROW 2: EMPOWER STAGES & LATENCY INDICATOR (side by side) ====
-    local EmpowerGroup = GUIWidgets.CreateInlineGroup(EnhancementsContainer, "Empower Stage Visuals")
-    EmpowerGroup:SetRelativeWidth(0.48)
+    -- ==== EMPOWER STAGES (Right Column) ====
+    local EmpowerGroup = GUIWidgets.CreateInlineGroup(EnhancementsContainer, "Empower Stages")
+    EmpowerGroup:SetRelativeWidth(0.33)
     
     local EmpowerToggle = AG:Create("CheckBox")
-    EmpowerToggle:SetLabel("Enable Empower Stage Indicators")
+    EmpowerToggle:SetLabel("Enable")
     EmpowerToggle:SetValue(CastBarDB.EmpowerStages.Enabled)
     EmpowerToggle:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.EmpowerStages.Enabled = value updateCallback() RefreshEnhancementsGUI() end)
-    EmpowerToggle:SetRelativeWidth(1.0)
+    EmpowerToggle:SetFullWidth(true)
     EmpowerGroup:AddChild(EmpowerToggle)
 
     local EmpowerStyleDropdown = AG:Create("Dropdown")
     EmpowerStyleDropdown:SetList({["LINES"] = "Lines", ["FILLS"] = "Fills", ["BOXES"] = "Boxes"})
-    EmpowerStyleDropdown:SetLabel("Stage Display Style")
+    EmpowerStyleDropdown:SetLabel("Style")
     EmpowerStyleDropdown:SetValue(CastBarDB.EmpowerStages.Style or "LINES")
     EmpowerStyleDropdown:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.EmpowerStages.Style = value updateCallback() end)
-    EmpowerStyleDropdown:SetRelativeWidth(1.0)
+    EmpowerStyleDropdown:SetFullWidth(true)
     EmpowerGroup:AddChild(EmpowerStyleDropdown)
 
     local EmpowerColour = CastBarDB.EmpowerStages.Colour or {1, 1, 0, 1}
     local EmpowerColourPicker = AG:Create("ColorPicker")
-    EmpowerColourPicker:SetLabel("Stage Marker Color")
+    EmpowerColourPicker:SetLabel("Color")
     EmpowerColourPicker:SetColor(EmpowerColour[1], EmpowerColour[2], EmpowerColour[3], EmpowerColour[4])
     EmpowerColourPicker:SetCallback("OnValueChanged", function(_, _, r, g, b, a) CastBarDB.EmpowerStages.Colour = {r, g, b, a} updateCallback() end)
-    EmpowerColourPicker:SetRelativeWidth(1.0)
+    EmpowerColourPicker:SetFullWidth(true)
     EmpowerGroup:AddChild(EmpowerColourPicker)
 
     local EmpowerWidthSlider = AG:Create("Slider")
-    EmpowerWidthSlider:SetLabel("Indicator Width")
+    EmpowerWidthSlider:SetLabel("Width")
     EmpowerWidthSlider:SetValue(CastBarDB.EmpowerStages.Width or 4)
     EmpowerWidthSlider:SetSliderValues(2, 20, 1)
     EmpowerWidthSlider:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.EmpowerStages.Width = value updateCallback() end)
-    EmpowerWidthSlider:SetRelativeWidth(0.5)
+    EmpowerWidthSlider:SetFullWidth(true)
     EmpowerGroup:AddChild(EmpowerWidthSlider)
 
     local EmpowerHeightSlider = AG:Create("Slider")
-    EmpowerHeightSlider:SetLabel("Indicator Height")
+    EmpowerHeightSlider:SetLabel("Height")
     EmpowerHeightSlider:SetValue(CastBarDB.EmpowerStages.Height or 24)
     EmpowerHeightSlider:SetSliderValues(10, 50, 1)
     EmpowerHeightSlider:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.EmpowerStages.Height = value updateCallback() end)
-    EmpowerHeightSlider:SetRelativeWidth(0.5)
+    EmpowerHeightSlider:SetFullWidth(true)
     EmpowerGroup:AddChild(EmpowerHeightSlider)
 
-    -- ==== LATENCY INDICATOR (right of Empower) ====
-    local LatencyGroup = GUIWidgets.CreateInlineGroup(EnhancementsContainer, "Latency Indicator")
-    LatencyGroup:SetRelativeWidth(0.48)
+    -- ==== LATENCY & PERFORMANCE (Full Width Below) ====
+    local LatencyGroup = GUIWidgets.CreateInlineGroup(EnhancementsContainer, "Latency & Performance")
+    LatencyGroup:SetFullWidth(true)
     
     local LatencyToggle = AG:Create("CheckBox")
     LatencyToggle:SetLabel("Enable Latency Display")
@@ -1184,19 +1185,15 @@ function GUIUnits:CreateCastBarEnhancementsSettings(containerParent, unit, updat
     HighLatencyThreshold:SetValue(CastBarDB.LatencyIndicator.HighLatencyThreshold or 150)
     HighLatencyThreshold:SetSliderValues(50, 500, 10)
     HighLatencyThreshold:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.LatencyIndicator.HighLatencyThreshold = value updateCallback() end)
-    HighLatencyThreshold:SetRelativeWidth(1.0)
+    HighLatencyThreshold:SetRelativeWidth(0.5)
     LatencyGroup:AddChild(HighLatencyThreshold)
 
-    -- ==== ROW 3: PERFORMANCE SETTINGS (full width) ====
-    local PerfGroup = GUIWidgets.CreateInlineGroup(EnhancementsContainer, "Performance Settings")
-    PerfGroup:SetRelativeWidth(1.0)
-    
     local SimplifyToggle = AG:Create("CheckBox")
     SimplifyToggle:SetLabel("Simplify For Large Groups")
     SimplifyToggle:SetValue(CastBarDB.Performance.SimplifyForLargeGroups)
     SimplifyToggle:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.Performance.SimplifyForLargeGroups = value updateCallback() RefreshEnhancementsGUI() end)
     SimplifyToggle:SetRelativeWidth(0.5)
-    PerfGroup:AddChild(SimplifyToggle)
+    LatencyGroup:AddChild(SimplifyToggle)
 
     local GroupSizeThreshold = AG:Create("Slider")
     GroupSizeThreshold:SetLabel("Group Size Threshold")
@@ -1204,7 +1201,7 @@ function GUIUnits:CreateCastBarEnhancementsSettings(containerParent, unit, updat
     GroupSizeThreshold:SetSliderValues(5, 40, 1)
     GroupSizeThreshold:SetCallback("OnValueChanged", function(_, _, value) CastBarDB.Performance.GroupSizeThreshold = value updateCallback() end)
     GroupSizeThreshold:SetRelativeWidth(0.5)
-    PerfGroup:AddChild(GroupSizeThreshold)
+    LatencyGroup:AddChild(GroupSizeThreshold)
 
     -- Refresh logic
     RefreshEnhancementsGUI = function()
@@ -1229,8 +1226,6 @@ function GUIUnits:CreateCastBarEnhancementsSettings(containerParent, unit, updat
 
     RefreshEnhancementsGUI()
 end
-
--- CastBar coordinator: TabGroup for Bar/Icon/SpellName/Duration/Enhancements
 function GUIUnits:CreateCastBarSettings(containerParent, unit)
     local function SelectCastBarTab(CastBarContainer, _, CastBarTab)
         SaveSubTab(unit, "CastBar", CastBarTab)
@@ -2353,9 +2348,10 @@ function GUIUnits:CreateSpecificAuraSettings(containerParent, unit, auraDB)
     local AuraContainer = GUIWidgets.CreateInlineGroup(containerParent, auraDB .. " Settings")
     local LayoutContainer  -- Will be defined later
     local CountContainer   -- Will be defined later
+    local RefreshAuraGUI   -- Forward declaration for callbacks
 
     -- Define RefreshAuraGUI early so callbacks can reference it
-    local function RefreshAuraGUI()
+    RefreshAuraGUI = function()
         if AuraDB.Enabled then
             GUIWidgets.DeepDisable(AuraContainer, false, Toggle)
             if LayoutContainer then GUIWidgets.DeepDisable(LayoutContainer, false, Toggle) end
@@ -2550,18 +2546,6 @@ function GUIUnits:CreateSpecificAuraSettings(containerParent, unit, auraDB)
     ColourPicker:SetHasAlpha(false)
     ColourPicker:SetRelativeWidth(0.25)
     CountContainer:AddChild(ColourPicker)
-
-    local function RefreshAuraGUI()
-        if AuraDB.Enabled then
-            GUIWidgets.DeepDisable(AuraContainer, false, Toggle)
-            GUIWidgets.DeepDisable(LayoutContainer, false, Toggle)
-            GUIWidgets.DeepDisable(CountContainer, false, Toggle)
-        else
-            GUIWidgets.DeepDisable(AuraContainer, true, Toggle)
-            GUIWidgets.DeepDisable(LayoutContainer, true, Toggle)
-            GUIWidgets.DeepDisable(CountContainer, true, Toggle)
-        end
-    end
 
     RefreshAuraGUI()
 

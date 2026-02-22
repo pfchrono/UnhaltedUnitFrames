@@ -262,16 +262,17 @@ function UUF:UpdateUnitCastBar(unitFrame, unit)
     local FrameDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Frame
     local CastBarDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].CastBar
     local frameName = unitFrame:GetName() or UUF:FetchFrameName(unit)
+    local CastBarContainer = unitFrame.Castbar and unitFrame.Castbar:GetParent()
 
     if CastBarDB.Enabled then
         unitFrame.Castbar = unitFrame.Castbar or UUF:CreateUnitCastBar(unitFrame, unit)
-
-        local CastBarContainer = unitFrame.Castbar and unitFrame.Castbar:GetParent()
+        CastBarContainer = unitFrame.Castbar and unitFrame.Castbar:GetParent()
 
         if not unitFrame:IsElementEnabled("Castbar") then unitFrame:EnableElement("Castbar") end
 
             if unitFrame.Castbar then
                 UUF:QueueOrRun(function()
+                    if not CastBarContainer then return end
                     if CastBarContainer then CastBarContainer:ClearAllPoints() end
                     if CastBarContainer then CastBarContainer:SetPoint(CastBarDB.Layout[1], unitFrame, CastBarDB.Layout[2], CastBarDB.Layout[3], CastBarDB.Layout[4]) end
                     if CastBarContainer then CastBarContainer:SetFrameStrata(CastBarDB.FrameStrata) end
@@ -307,6 +308,7 @@ function UUF:UpdateUnitCastBar(unitFrame, unit)
                 unitFrame.Castbar.Icon:SetSize(CastBarDB.Height - 2, CastBarDB.Height - 2)
                 unitFrame.Castbar.Icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
                 UUF:QueueOrRun(function()
+                    if not CastBarContainer then return end
                     unitFrame.Castbar.Icon:ClearAllPoints()
                     if CastBarDB.Icon.Enabled and CastBarDB.Icon.Position == "LEFT" then
                         unitFrame.Castbar.Icon:SetPoint("TOPLEFT", CastBarContainer, "TOPLEFT", 1, -1)
@@ -325,6 +327,7 @@ function UUF:UpdateUnitCastBar(unitFrame, unit)
                 if unitFrame.Castbar.Icon then unitFrame.Castbar.Icon:Hide() end
                 unitFrame.Castbar.Icon = nil
                 UUF:QueueOrRun(function()
+                    if not CastBarContainer then return end
                     unitFrame.Castbar:ClearAllPoints()
                     unitFrame.Castbar:SetPoint("TOPLEFT", CastBarContainer, "TOPLEFT", 1, -1)
                     unitFrame.Castbar:SetPoint("BOTTOMRIGHT", CastBarContainer, "BOTTOMRIGHT", -1, 1)

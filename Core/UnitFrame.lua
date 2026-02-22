@@ -8,6 +8,15 @@ local RegisterUnitWatch, UnregisterUnitWatch = RegisterUnitWatch, UnregisterUnit
 local pairs, type = pairs, type
 local IsSecretValue = issecretvalue or function() return false end
 
+local function QueueDeferredVisibilityRefresh(flagKey, refreshFn)
+    if UUF[flagKey] then return end
+    UUF[flagKey] = true
+    UUF:QueueOrRun(function()
+        UUF[flagKey] = nil
+        refreshFn()
+    end)
+end
+
 local function ApplyScripts(unitFrame)
     unitFrame:RegisterForClicks("AnyUp")
     unitFrame:SetAttribute("*type1", "target")
@@ -522,18 +531,25 @@ end
 
 function UUF:UpdatePetFrameVisibility()
     if not UUF.PET then return end
-    
+
     local petDB = UUF.db.profile.Units.pet
     if not petDB then return end
-    
+
+    if InCombatLockdown() then
+        QueueDeferredVisibilityRefresh("_pendingPetVisibilityRefresh", function()
+            UUF:UpdatePetFrameVisibility()
+        end)
+        return
+    end
+
     -- If pet frame is disabled, hide it
     if not petDB.Enabled then
         if UUF.PET:IsVisible() then UUF.PET:Hide() end
         return
     end
-    
+
     local petExists = UnitExists("pet") or UnitExists("playerpet")
-    
+
     if petExists then
         -- Ensure anchors are always set (RegisterUnitWatch may have cleared them)
         local petLayout = petDB.Frame.Layout
@@ -565,12 +581,19 @@ function UUF:UpdatePartyFrameVisibility()
     if not UUF.db or not UUF.db.profile or not UUF.db.profile.Units.party or not UUF.db.profile.Units.party.Enabled then
         return
     end
-    
+
     -- Skip visibility checks when in test mode (test frames use fake units that won't exist in-game)
     if UUF.PARTY_TEST_MODE then
         return
     end
-    
+
+    if InCombatLockdown() then
+        QueueDeferredVisibilityRefresh("_pendingPartyVisibilityRefresh", function()
+            UUF:UpdatePartyFrameVisibility()
+        end)
+        return
+    end
+
     -- Check each party frame and ensure it shows if the unit exists
     -- This is needed for Delves where NPC companions might not properly register with RegisterUnitWatch
     for i = 1, UUF.MAX_PARTY_MEMBERS do

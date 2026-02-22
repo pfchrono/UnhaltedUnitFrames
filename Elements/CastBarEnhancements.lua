@@ -171,6 +171,17 @@ end
 function CastBarEnhancements:UpdateChannelTicks(castBar, castBarDB, unit)
     if not castBarDB.ChannelTicks.Enabled then return end
 
+    -- Check if the cast is an empowered cast and skip updating channel ticks
+    local _, _, _, _, _, _, _, _, isEmpowered = UnitChannelInfo(unit)
+    if isEmpowered then
+        if castBar._ChannelTicks then
+            for _, tick in pairs(castBar._ChannelTicks) do
+                if tick then tick:Hide() end
+            end
+        end
+        return
+    end
+
     local _, _, _, startTime, endTime, _, _, spellID = UnitChannelInfo(unit)
     if IsSecretValue(startTime) or IsSecretValue(endTime) or IsSecretValue(spellID) then
         if castBar._ChannelTicks then
@@ -202,6 +213,7 @@ function CastBarEnhancements:UpdateChannelTicks(castBar, castBarDB, unit)
     local db = castBarDB.ChannelTicks
     local tickMarkers = castBar._ChannelTicks or {}
     local barWidth = castBar:GetWidth()
+    local barHeight = castBar:GetHeight()
     local duration = (endTime - startTime) -- UnitChannelInfo returns ms
     if not duration or duration <= 0 then
         for _, tick in pairs(tickMarkers) do
@@ -210,24 +222,34 @@ function CastBarEnhancements:UpdateChannelTicks(castBar, castBarDB, unit)
         return
     end
 
+    -- Calculate evenly spaced tick positions
+    local tickInterval = duration / (#ticks + 1)
+
     for i = 1, #ticks do
         if not tickMarkers[i] then
             tickMarkers[i] = castBar:CreateTexture(nil, "OVERLAY")
-            tickMarkers[i]:SetTexture(db.Texture or "Interface\\CastingBar\\UI-CastingBar-Tick")
         end
 
         local tick = tickMarkers[i]
-        local tickTime = ticks[i]
+        local tickTime = tickInterval * i
         local progress = tickTime / duration
+        local tickWidth = (db.Width or db.Thickness or 8) / 2
+        local tickHeight = db.Height or (barHeight - 5)
+        local tickTexture = db.Texture or "Interface\\CastingBar\\UI-CastingBar-Tick"
 
-        tick:SetSize(db.Width or 8, db.Height or castBar:GetHeight() * 1.2)
-        tick:SetColorTexture(db.Colour[1], db.Colour[2], db.Colour[3], db.Opacity or 0.8)
+        tick:SetSize(tickWidth, tickHeight)
+        if tickTexture and tickTexture ~= "" then
+            tick:SetTexture(tickTexture)
+            tick:SetVertexColor(db.Colour[1], db.Colour[2], db.Colour[3], db.Opacity or 0.8)
+        else
+            tick:SetColorTexture(db.Colour[1], db.Colour[2], db.Colour[3], db.Opacity or 0.8)
+        end
         tick:ClearAllPoints()
 
         if castBar:GetReverseFill() then
-            tick:SetPoint("CENTER", castBar, "TOPRIGHT", -barWidth * progress, 0)
+            tick:SetPoint("CENTER", castBar, "TOPRIGHT", -barWidth * progress, -5) -- Lower the tick by 5px
         else
-            tick:SetPoint("CENTER", castBar, "TOPLEFT", barWidth * progress, 0)
+            tick:SetPoint("CENTER", castBar, "TOPLEFT", barWidth * progress, -5) -- Lower the tick by 5px
         end
         tick:Show()
     end
@@ -254,10 +276,10 @@ function CastBarEnhancements:CreateEmpowerStages(castBar, castBarDB)
         end
         return
     end
-    
+
     local container = castBar:GetParent()
     if not container then return end
-    
+
     if not castBar._EmpowerStages then
         castBar._EmpowerStages = {}
     end
@@ -275,7 +297,6 @@ function CastBarEnhancements:UpdateEmpowerStages(castBar, castBarDB, unit)
         return
     end
 
-    -- Retail empower data is exposed via UnitChannelInfo + GetUnitEmpowerStageDuration.
     if not GetUnitEmpowerStageDuration then
         if castBar._EmpowerStages then
             for _, stage in pairs(castBar._EmpowerStages) do
@@ -284,7 +305,7 @@ function CastBarEnhancements:UpdateEmpowerStages(castBar, castBarDB, unit)
         end
         return
     end
-    
+
     local channelName, _, _, startTime, _, _, _, _, isEmpowered, numStages = UnitChannelInfo(unit)
     if IsSecretValue(channelName) or IsSecretValue(startTime) or IsSecretValue(isEmpowered) or IsSecretValue(numStages) then
         if castBar._EmpowerStages then
@@ -303,96 +324,73 @@ function CastBarEnhancements:UpdateEmpowerStages(castBar, castBarDB, unit)
         return
     end
 
-    local stageCount = numStages
-    local currentStage = 0
-    local nowMs = GetTime() * 1000
-    local elapsedMs = math_max(0, nowMs - startTime)
-    local cumulativeMs = 0
-
-    for stageIndex = 0, stageCount - 1 do
-        local stageDuration = GetUnitEmpowerStageDuration(unit, stageIndex)
-        if stageDuration and stageDuration > 0 then
-            cumulativeMs = cumulativeMs + stageDuration
-            if elapsedMs >= cumulativeMs then
-                currentStage = stageIndex + 1
-            else
-                break
-            end
-        end
-    end
-    
-    -- Debug output for troubleshooting
-    if UUF.DebugOutput and stageCount and stageCount > 0 then
-        UUF.DebugOutput:Output("EmpowerStages", string.format("Stage count: %d, Current: %d", stageCount, currentStage or 0), UUF.DebugOutput.TIER_DEBUG)
-    end
-    
-    -- No empower stages for this spell
-    if not stageCount or stageCount == 0 then
-        if castBar._EmpowerStages then
-            for _, stage in pairs(castBar._EmpowerStages) do
-                if stage then stage:Hide() end
-            end
-        end
-        return
-    end
-
     local db = castBarDB.EmpowerStages
     local stages = castBar._EmpowerStages or {}
     local barWidth = castBar:GetWidth()
     local barHeight = castBar:GetHeight()
-    
+
     -- Ensure we have valid dimensions
     if barWidth <= 0 or barHeight <= 0 then return end
-    
-    local stageSize = db.Width or 12  -- Width of each individual stage indicator
-    local stageHeight = db.Height or (barHeight * 0.8)  -- Height as percentage of bar
-    local padding = 2  -- Spacing between stages
 
-    -- Calculate total width needed for all stages
-    local totalStageWidth = (stageSize * stageCount) + (padding * (stageCount - 1))
-    local startX = (barWidth - totalStageWidth) / 2  -- Center the stages on the bar
-    local verticalOffset = -(barHeight / 2)  -- Center stages vertically on the bar
+    -- Calculate elapsed time in milliseconds
+    local currentTimeMs = GetTime() * 1000
+    local elapsedMs = currentTimeMs - startTime
+    if elapsedMs < 0 then elapsedMs = 0 end
 
-    -- Create or update stage markers
-    for i = 1, stageCount do
+    -- Build cumulative stage end times
+    local stageEnds = {}
+    local totalMs = 0
+    for stageIdx = 0, numStages - 1 do
+        local stageDurationMs = GetUnitEmpowerStageDuration(unit, stageIdx)
+        if stageDurationMs and stageDurationMs > 0 then
+            totalMs = totalMs + stageDurationMs
+            stageEnds[stageIdx + 1] = totalMs
+        end
+    end
+
+    -- Determine current stage (how many full stages completed)
+    local currentStage = 0
+    for i = 1, #stageEnds do
+        if elapsedMs >= stageEnds[i] then
+            currentStage = i
+        else
+            break
+        end
+    end
+
+    local stageSize = db.Width or db.Thickness or 12
+    local stageHeight = db.Height or (barHeight * 0.8)
+    local stagePadding = db.Padding or 1
+    local totalWidth = (stageSize * numStages) + (stagePadding * (numStages - 1))
+    local startX = (barWidth - totalWidth) * 0.5
+
+    -- Update stage visuals
+    for i = 1, numStages do
         if not stages[i] then
             stages[i] = castBar:CreateTexture(nil, "OVERLAY")
         end
 
         local stage = stages[i]
-        local xOffset = startX + ((i - 1) * (stageSize + padding))
+        local xOffset = startX + ((i - 1) * (stageSize + stagePadding)) + (stageSize * 0.5)
 
-        -- Position marker - center it both horizontally and vertically on the castbar
         stage:SetSize(stageSize, stageHeight)
         stage:ClearAllPoints()
-        stage:SetPoint("CENTER", castBar, "CENTER", xOffset - (barWidth / 2) + (stageSize / 2), 0)
+        stage:SetPoint("CENTER", castBar, "LEFT", xOffset, 0)
 
-        -- Style based on type and completion
-        if db.Style == "LINES" then
-            -- Vertical line style - completed stages are opaque, future stages are dim
-            local opacity = i <= (currentStage or 0) and (db.Colour[4] or 0.9) or 0.25
-            stage:SetColorTexture(db.Colour[1], db.Colour[2], db.Colour[3], opacity)
-        elseif db.Style == "FILLS" then
-            -- Filled boxes - active stage is brighter
-            local opacity = i == (currentStage or 0) and 1.0 or (i < (currentStage or 0) and 0.7 or 0.2)
-            stage:SetColorTexture(db.Colour[1], db.Colour[2], db.Colour[3], opacity)
-        elseif db.Style == "BOXES" then
-            -- Box style with desaturation for future stages
+        -- Option A: Sequential lighting (all stages up to current are lit)
+        if i <= currentStage then
+            -- Stage is completed/active - bright
             stage:SetColorTexture(db.Colour[1], db.Colour[2], db.Colour[3], db.Colour[4] or 0.9)
-            if i > (currentStage or 0) then
-                stage:SetDesaturated(true)
-                stage:SetAlpha(0.5)
-            else
-                stage:SetDesaturated(false)
-                stage:SetAlpha(1.0)
-            end
+        else
+            -- Stage not yet reached - dim
+            stage:SetColorTexture(db.Colour[1], db.Colour[2], db.Colour[3], 0.25)
         end
 
         stage:Show()
     end
 
     -- Hide unused stages
-    for i = stageCount + 1, #stages do
+    for i = numStages + 1, #stages do
         stages[i]:Hide()
     end
 
