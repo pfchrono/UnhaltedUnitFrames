@@ -28,6 +28,8 @@ This element updates by changing the texture.
 
 local _, ns = ...
 local oUF = ns.oUF
+local match = string.match
+local pcall = pcall
 
 -- sourced from Blizzard_UnitFrame/Mainline/CompactUnitFrame.lua
 local ICONS = {
@@ -59,7 +61,16 @@ local function Update(self, event, unit)
 		element:PreUpdate(unit)
 	end
 
-	local class = UnitPvpClassification(unit)
+	-- UnitPvpClassification errors on unsupported units (e.g. boss1..bossN).
+	local class
+	if unit and match(unit, "^boss%d+$") then
+		class = nil
+	else
+		local ok, result = pcall(UnitPvpClassification, unit)
+		if ok then
+			class = result
+		end
+	end
 	local icon = ICONS[class]
 	if(icon) then
 		element:SetAtlas(icon, element.useAtlasSize)

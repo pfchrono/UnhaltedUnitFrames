@@ -27,6 +27,7 @@ UUF.CoalescingIntegration = CoalescingIntegration
 
 -- Performance locals
 local pairs = pairs
+local type = type
 local C_Timer = C_Timer
 local CreateFrame = CreateFrame
 
@@ -182,7 +183,7 @@ function CoalescingIntegration:_CreateBatchedHandler(eventName, priority)
 		end
 		
 		-- Get the frame for this unit (if spawned)
-		if unitToken then
+		if type(unitToken) == "string" and unitToken ~= "" then
 			local frame = UUF.Units[unitToken]
 			if frame and frame.unit then
 				-- Mark this frame dirty for the event with appropriate priority
@@ -228,7 +229,7 @@ function CoalescingIntegration:_CreateEventDispatcher()
 		if UUF.EventCoalescer then
 			if UNIT_SCOPED_EVENTS[eventName] then
 				local unitToken = ...
-				if not unitToken or not UUF.Units or not UUF.Units[unitToken] then
+				if type(unitToken) ~= "string" or unitToken == "" or not UUF.Units or not UUF.Units[unitToken] then
 					return
 				end
 			end

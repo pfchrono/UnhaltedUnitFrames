@@ -4,7 +4,7 @@ local oUF = UUF.oUF
 function UUF:CreateUnitResurrectIndicator(unitFrame, unit)
     if not unitFrame then return end
     
-    local ResurrectDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].ResurrectIndicator
+    local ResurrectDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Indicators.ResurrectIndicator
     if not ResurrectDB or not ResurrectDB.Enabled then return end
     
     local frameName = unitFrame:GetName() or UUF:FetchFrameName(unit)
@@ -24,15 +24,12 @@ function UUF:CreateUnitResurrectIndicator(unitFrame, unit)
     unitFrame.ResurrectIndicator = resurrectIndicator
     unitFrame.ResurrectIndicator.Icon = resurrectIcon
     
-    if unitFrame:IsElementEnabled("ResurrectIndicator") then
-        unitFrame:EnableElement("ResurrectIndicator")
-    end
 end
 
 function UUF:UpdateUnitResurrectIndicator(unitFrame, unit)
     if not unitFrame then return end
     
-    local ResurrectDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].ResurrectIndicator
+    local ResurrectDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Indicators.ResurrectIndicator
     if not ResurrectDB or not ResurrectDB.Enabled then
         if unitFrame.ResurrectIndicator then
             UUF:QueueOrRun(function()
@@ -44,6 +41,10 @@ function UUF:UpdateUnitResurrectIndicator(unitFrame, unit)
     
     if not unitFrame.ResurrectIndicator then
         UUF:CreateUnitResurrectIndicator(unitFrame, unit)
+    end
+
+    if unitFrame.ResurrectIndicator and not unitFrame:IsElementEnabled("ResurrectIndicator") then
+        unitFrame:EnableElement("ResurrectIndicator")
     end
     
     if unitFrame.ResurrectIndicator then

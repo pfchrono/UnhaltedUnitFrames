@@ -350,19 +350,5 @@ function UUF:_SetupEventDispatcher()
     end)
 end
 
-local minimapPingFrame = CreateFrame("Frame")
-do
-    local ok = pcall(minimapPingFrame.RegisterEvent, minimapPingFrame, "MINIMAP_PING")
-    if ok then
-        minimapPingFrame:SetScript("OnEvent", function(_, _, unit)
-            if UUF._eventBus then
-                UUF._eventBus:Dispatch("MINIMAP_PING", unit)
-            else
-                UUF:ShowPingOnUnit(unit)
-            end
-        end)
-    end
-end
-
 
 

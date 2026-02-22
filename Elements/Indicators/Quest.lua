@@ -4,7 +4,7 @@ local oUF = UUF.oUF
 function UUF:CreateUnitQuestIndicator(unitFrame, unit)
     if not unitFrame then return end
     
-    local QuestDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].QuestIndicator
+    local QuestDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Indicators.QuestIndicator
     if not QuestDB or not QuestDB.Enabled then return end
     
     local frameName = unitFrame:GetName() or UUF:FetchFrameName(unit)
@@ -30,15 +30,12 @@ function UUF:CreateUnitQuestIndicator(unitFrame, unit)
     unitFrame.QuestIndicator.Icon = questIcon
     unitFrame.QuestIndicator.Border = questBorder
     
-    if unitFrame:IsElementEnabled("QuestIndicator") then
-        unitFrame:EnableElement("QuestIndicator")
-    end
 end
 
 function UUF:UpdateUnitQuestIndicator(unitFrame, unit)
     if not unitFrame then return end
     
-    local QuestDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].QuestIndicator
+    local QuestDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Indicators.QuestIndicator
     if not QuestDB or not QuestDB.Enabled then
         if unitFrame.QuestIndicator then
             UUF:QueueOrRun(function()
@@ -50,6 +47,10 @@ function UUF:UpdateUnitQuestIndicator(unitFrame, unit)
     
     if not unitFrame.QuestIndicator then
         UUF:CreateUnitQuestIndicator(unitFrame, unit)
+    end
+
+    if unitFrame.QuestIndicator and not unitFrame:IsElementEnabled("QuestIndicator") then
+        unitFrame:EnableElement("QuestIndicator")
     end
     
     if unitFrame.QuestIndicator then

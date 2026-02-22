@@ -4,7 +4,7 @@ local oUF = UUF.oUF
 function UUF:CreateUnitStagger(unitFrame, unit)
     if unit ~= "player" then return end
     
-    local StaggerDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Stagger
+    local StaggerDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Indicators.Stagger
     if not StaggerDB or not StaggerDB.Enabled then return end
     
     local frameName = unitFrame:GetName() or UUF:FetchFrameName(unit)
@@ -26,16 +26,13 @@ function UUF:CreateUnitStagger(unitFrame, unit)
     
     unitFrame.Stagger = staggerBar
     
-    if unitFrame:IsElementEnabled("Stagger") then
-        unitFrame:EnableElement("Stagger")
-    end
 end
 
 function UUF:UpdateUnitStagger(unitFrame, unit)
     if unit ~= "player" then return end
     if not unitFrame then return end
     
-    local StaggerDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Stagger
+    local StaggerDB = UUF.db.profile.Units[UUF:GetNormalizedUnit(unit)].Indicators.Stagger
     if not StaggerDB or not StaggerDB.Enabled then
         if unitFrame.Stagger then
             UUF:QueueOrRun(function()
@@ -47,6 +44,10 @@ function UUF:UpdateUnitStagger(unitFrame, unit)
     
     if not unitFrame.Stagger then
         UUF:CreateUnitStagger(unitFrame, unit)
+    end
+
+    if unitFrame.Stagger and not unitFrame:IsElementEnabled("Stagger") then
+        unitFrame:EnableElement("Stagger")
     end
     
     if unitFrame.Stagger then

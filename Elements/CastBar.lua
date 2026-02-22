@@ -137,7 +137,6 @@ function UUF:CreateUnitCastBar(unitFrame, unit)
     end
 
     if CastBarDB.Enabled then
-        if not unitFrame:IsElementEnabled("Castbar") then unitFrame:EnableElement("Castbar") end
         unitFrame.Castbar = CastBar
         unitFrame.Castbar.Text = SpellNameText
         unitFrame.Castbar.Time = DurationText
@@ -190,11 +189,6 @@ function UUF:CreateUnitCastBar(unitFrame, unit)
         
         -- Shared cleanup function for all cast end events
         local function CleanupCastBarEnhancements(frameCastBar, reason)
-            -- Debug output
-            if UUF.DebugOutput then
-                UUF.DebugOutput:Output("CastBar", "Cleaning up enhancements: " .. (reason or "unknown"), 2)
-            end
-            
             -- Keep oUF's OnUpdate intact; just disable enhancement updates.
             frameCastBar._enhancementActive = false
             

@@ -257,7 +257,7 @@ function UUF:CreateUnitFrame(unitFrame, unit)
     UUF:CreateUnitHealPrediction(unitFrame, unit)
     if normalizedUnit ~= "targettarget" and normalizedUnit ~= "focustarget" then UUF:CreateUnitPortrait(unitFrame, unit) end
     UUF:CreateUnitPowerBar(unitFrame, unit)
-    if unit == "player" and UUF:RequiresAlternativePowerBar() then UUF:CreateUnitAlternativePowerBar(unitFrame, unit) end
+    if unit == "player" then UUF:CreateUnitAlternativePowerBar(unitFrame, unit) end
     if unit == "player" then UUF:CreateUnitSecondaryPowerBar(unitFrame, unit) end
     UUF:CreateUnitRaidTargetMarker(unitFrame, unit)
     if (unit == "player" or unit == "target" or normalizedUnit == "party") and UUF.CreateUnitLeaderAssistantIndicator then
@@ -620,8 +620,9 @@ function UUF:UpdatePartyFrameVisibility()
                 partyFrame:Show()
             end
         else
-            if partyFrame:IsVisible() and i > 1 then
-                -- Only hide if not the player frame (player frame should always be visible when enabled)
+            local isPlayerSlot = (unitToCheck == "player")
+            if partyFrame:IsVisible() and not isPlayerSlot then
+                -- Keep player slot visible when configured to include player.
                 partyFrame:Hide()
             end
         end
